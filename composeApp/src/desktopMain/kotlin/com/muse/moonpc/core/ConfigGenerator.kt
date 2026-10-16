@@ -295,7 +295,7 @@ object ConfigGenerator {
                     .put("interface_name", opts.tunInterfaceName)
                     .put("mtu", opts.tunMtu)
                     .put("address", JSONArray().put("172.19.0.1/30"))
-                    .put("auto_route", true)
+                    .put("auto_route", false)
                     .put("strict_route", true)
                     .put("stack", opts.tunStack),
             )
