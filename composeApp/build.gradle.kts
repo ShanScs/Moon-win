@@ -63,7 +63,7 @@ compose.desktop {
                 else -> targetFormats(TargetFormat.AppImage)
             }
             packageName = "MoonPC"
-            packageVersion = "0.2.10"
+            packageVersion = "0.2.11"
             vendor = "Muse"
             description = "Moon PC - desktop proxy client (sing-box core)"
             copyright = "© 2026 Muse"
