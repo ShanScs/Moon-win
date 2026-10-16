@@ -244,8 +244,8 @@ private fun UrlRuleList(
             Spacer(Modifier.weight(1f))
             Button(onClick = onAdd) { Text("＋ 添加") }
         }
-        LazyColumn(Modifier.fillMaxSize()) {
-            items(rewriteStore.urlRules, key = { it.id }) { r ->
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            rewriteStore.urlRules.forEach { r ->
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     onClick = { onEdit(r) },
@@ -299,8 +299,8 @@ private fun HeaderRuleList(
             Spacer(Modifier.weight(1f))
             Button(onClick = onAdd) { Text("＋ 添加") }
         }
-        LazyColumn(Modifier.fillMaxSize()) {
-            items(rewriteStore.headerRules, key = { it.id }) { r ->
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            rewriteStore.headerRules.forEach { r ->
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     onClick = { onEdit(r) },

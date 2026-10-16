@@ -126,22 +126,19 @@ fun RuleScreen(
             )
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(vertical = 8.dp),
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp),
         ) {
             // ---- 规则集订阅 ----
             if (ruleStore.ruleSets.isNotEmpty()) {
-                item(key = "sets-header") {
                     Text(
                         "规则集订阅",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
                     )
-                }
-                items(ruleStore.ruleSets, key = { "set-${it.id}" }) { s ->
+                ruleStore.ruleSets.forEach { s ->
                     RuleSetCard(
                         sub = s,
                         onUpdate = {
@@ -159,30 +156,26 @@ fun RuleScreen(
                         onDelete = { ruleStore.removeRuleSet(s.id) },
                     )
                 }
-                item(key = "rules-header") {
-                    Text(
-                        "单条规则（按顺序匹配首条命中）",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
+                Text(
+                    "单条规则（按顺序匹配首条命中）",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
 
             // ---- 单条规则 ----
             if (ruleStore.rules.isEmpty()) {
-                item(key = "empty") {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            "暂无规则，点击右上「＋规则」添加\n改动在重启代理后生效",
-                            modifier = Modifier.padding(20.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "暂无规则，点击右上「＋规则」添加\n改动在重启代理后生效",
+                        modifier = Modifier.padding(20.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             } else {
-                items(ruleStore.rules, key = { it.id }) { r ->
+                ruleStore.rules.forEach { r ->
                     RuleRowCard(
                         rule = r,
                         groupAliases = groupAliases,
@@ -193,14 +186,12 @@ fun RuleScreen(
                     )
                 }
             }
-            item(key = "footer") {
-                Text(
-                    "规则改动在重启代理后生效",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-            }
+            Text(
+                "规则改动在重启代理后生效",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
         }
     }
 

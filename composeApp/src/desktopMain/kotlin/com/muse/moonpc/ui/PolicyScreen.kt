@@ -125,12 +125,11 @@ fun PolicyScreen(
                 )
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(vertical = 8.dp),
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp),
             ) {
-                items(groups, key = { it.id }) { g ->
+                groups.forEach { g ->
                     val isBuiltin = g.id == PolicyStore.BUILTIN_ID
                     PolicyGroupCard(
                         group = g,
