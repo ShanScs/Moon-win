@@ -287,12 +287,10 @@ object ConfigGenerator {
                     .put("tag", "tun-in")
                     .put("interface_name", opts.tunInterfaceName)
                     .put("mtu", opts.tunMtu)
-                    .put("inet4_address", "172.19.0.1/30")
+                    .put("address", JSONArray().put("172.19.0.1/30"))
                     .put("auto_route", true)
                     .put("strict_route", false)
-                    .put("stack", opts.tunStack)
-                    .put("sniff", true)
-                    .put("sniff_override_destination", true),
+                    .put("stack", opts.tunStack),
             )
         }
         return arr
