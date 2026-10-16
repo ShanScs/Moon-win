@@ -80,10 +80,7 @@ fun RewriteScreen(
     }
     androidx.compose.runtime.LaunchedEffect(Unit) { refreshCaStatus() }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    SurgePage {
         PageHeader(
             title = "重写",
             subtitle = "MITM 解密、URL 重写、Header 改写、JS 模块",
@@ -181,7 +178,7 @@ fun RewriteScreen(
             Tab(selected = innerTab == 2, onClick = { innerTab = 2 }, text = { Text("JS 模块") })
         }
 
-        Box(Modifier.weight(1f)) {
+        Box(Modifier.fillMaxWidth()) {
             when (innerTab) {
                 0 -> UrlRuleList(
                     rewriteStore = rewriteStore,

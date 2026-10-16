@@ -73,10 +73,7 @@ fun RuleScreen(
         policyStore.defs.map { it.alias.ifBlank { "策略组" } }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    SurgePage {
         PageHeader(
             title = "分流规则",
             subtitle = "${ruleStore.rules.size} 条规则",

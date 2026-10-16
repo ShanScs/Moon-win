@@ -4,8 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.muse.moonpc.core.AutoStartManager
 import com.muse.moonpc.data.AppSettings
 import kotlinx.coroutines.Dispatchers
@@ -28,10 +29,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * 设置页（M5，全新实现）：
- * - 开机自启（Windows 注册表）
- * - 最小化到托盘
- * - 关闭时最小化到托盘
+ * 设置页（Surge 风格）：
+ * - 通用：开机自启、最小化到托盘、关闭时最小化到托盘
+ * - 关于：版本信息
  */
 @Composable
 fun SettingsScreen(settings: AppSettings) {
@@ -40,76 +40,130 @@ fun SettingsScreen(settings: AppSettings) {
     var errMsg by remember { mutableStateOf<String?>(null) }
     val winSupported = remember { AutoStartManager.isWindows() }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    SurgePage {
         PageHeader(
             title = "设置",
             subtitle = "应用偏好设置",
         )
 
-        SettingSwitchRow(
-            title = "开机自启",
-            desc = if (winSupported) "开机自动启动 Moon PC" else "仅支持 Windows",
-            checked = settings.autoStart,
-            enabled = !busy && winSupported,
-            onChange = { on ->
-                busy = true
-                errMsg = null
-                scope.launch {
-                    val r = withContext(Dispatchers.IO) { AutoStartManager.setEnabled(on) }
-                    if (r.isSuccess) {
-                        settings.autoStart = on
-                        settings.save()
-                    } else {
-                        errMsg = "设置失败：${r.exceptionOrNull()?.message}"
+        // ---- 通用 ----
+        MoonCard {
+            Text(
+                "通用",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MoonColors.TextPrimary,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            SettingSwitchRow(
+                title = "开机自启",
+                desc = if (winSupported) "开机自动启动 Moon PC" else "仅支持 Windows",
+                checked = settings.autoStart,
+                enabled = !busy && winSupported,
+                onChange = { on ->
+                    busy = true
+                    errMsg = null
+                    scope.launch {
+                        val r = withContext(Dispatchers.IO) { AutoStartManager.setEnabled(on) }
+                        if (r.isSuccess) {
+                            settings.autoStart = on
+                            settings.save()
+                        } else {
+                            errMsg = "设置失败：${r.exceptionOrNull()?.message}"
+                        }
+                        busy = false
                     }
-                    busy = false
-                }
-            },
-        )
+                },
+            )
 
-        SettingSwitchRow(
-            title = "最小化到托盘",
-            desc = "最小化窗口时隐藏到系统托盘",
-            checked = settings.minimizeToTray,
-            enabled = !busy,
-            onChange = {
-                settings.minimizeToTray = it
-                settings.save()
-            },
-        )
+            HorizontalDivider(color = MoonColors.Divider)
 
-        SettingSwitchRow(
-            title = "关闭时最小化到托盘",
-            desc = "点击关闭按钮时隐藏到托盘，而不是退出程序",
-            checked = settings.closeToTray,
-            enabled = !busy,
-            onChange = {
-                settings.closeToTray = it
-                settings.save()
-            },
-        )
+            SettingSwitchRow(
+                title = "最小化到托盘",
+                desc = "最小化窗口时隐藏到系统托盘",
+                checked = settings.minimizeToTray,
+                enabled = !busy,
+                onChange = {
+                    settings.minimizeToTray = it
+                    settings.save()
+                },
+            )
+
+            HorizontalDivider(color = MoonColors.Divider)
+
+            SettingSwitchRow(
+                title = "关闭时最小化到托盘",
+                desc = "点击关闭按钮时隐藏到托盘，而不是退出程序",
+                checked = settings.closeToTray,
+                enabled = !busy,
+                onChange = {
+                    settings.closeToTray = it
+                    settings.save()
+                },
+            )
+        }
 
         if (busy) {
             Text(
                 "处理中…",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+                color = MoonColors.TextSecondary,
             )
         }
         errMsg?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(
+                it,
+                fontSize = 13.sp,
+                color = MoonColors.Danger,
+            )
         }
 
-        Spacer(Modifier.weight(1f))
-        HorizontalDivider()
-        Text(
-            "Moon PC 0.1.0 · sing-box 内核",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        // ---- 关于 ----
+        MoonCard {
+            Text(
+                "关于",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MoonColors.TextPrimary,
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "版本",
+                    fontSize = 14.sp,
+                    color = MoonColors.TextSecondary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "Moon PC 0.2.9",
+                    fontSize = 14.sp,
+                    color = MoonColors.TextPrimary,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = MoonColors.Divider)
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "内核",
+                    fontSize = 14.sp,
+                    color = MoonColors.TextSecondary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "sing-box 1.14.3",
+                    fontSize = 14.sp,
+                    color = MoonColors.TextPrimary,
+                )
+            }
+        }
     }
 }
 
@@ -126,11 +180,17 @@ private fun SettingSwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(
+                title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = MoonColors.TextPrimary,
+            )
+            Spacer(Modifier.height(2.dp))
             Text(
                 desc,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+                color = MoonColors.TextSecondary,
             )
         }
         Switch(checked = checked, enabled = enabled, onCheckedChange = onChange)

@@ -81,10 +81,7 @@ fun PolicyScreen(
         ConfigGenerator.nodeIdToTag(store.nodes).entries.associate { (k, v) -> v to k }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    SurgePage {
         PageHeader(
             title = "策略组",
             subtitle = "${policyStore.allGroups().size} 个策略组",
