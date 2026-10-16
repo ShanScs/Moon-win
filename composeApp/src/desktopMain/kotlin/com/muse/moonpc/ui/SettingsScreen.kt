@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.muse.moonpc.core.AutoStartManager
+import com.muse.moonpc.core.SingBoxManager
+import com.muse.moonpc.core.TunManager
 import com.muse.moonpc.data.AppSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -34,11 +36,13 @@ import kotlinx.coroutines.withContext
  * - 关于：版本信息
  */
 @Composable
-fun SettingsScreen(settings: AppSettings) {
+fun SettingsScreen(settings: AppSettings, manager: SingBoxManager? = null) {
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     var errMsg by remember { mutableStateOf<String?>(null) }
     val winSupported = remember { AutoStartManager.isWindows() }
+    var diagResult by remember { mutableStateOf<String?>(null) }
+    var diagBusy by remember { mutableStateOf(false) }
 
     SurgePage {
         PageHeader(
@@ -119,6 +123,69 @@ fun SettingsScreen(settings: AppSettings) {
             )
         }
 
+        // ---- TUN 诊断 ----
+        if (manager != null) {
+            MoonCard {
+                Text(
+                    "TUN 诊断",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MoonColors.TextPrimary,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "sing-box 进程：${if (manager.isProcessAlive()) "运行中" else "未运行/已崩溃"}",
+                    fontSize = 14.sp,
+                    color = MoonColors.TextSecondary,
+                )
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.material3.Button(
+                    onClick = {
+                        diagBusy = true
+                        diagResult = null
+                        scope.launch(Dispatchers.IO) {
+                            val r = TunManager.diagnose()
+                            withContext(Dispatchers.Main) {
+                                diagResult = r
+                                diagBusy = false
+                            }
+                        }
+                    },
+                    enabled = !diagBusy,
+                ) {
+                    Text(if (diagBusy) "诊断中…" else "运行诊断")
+                }
+                diagResult?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        it,
+                        fontSize = 14.sp,
+                        color = MoonColors.TextPrimary,
+                    )
+                }
+                val logs = remember(diagResult) { manager.recentLogs().takeLast(30) }
+                if (logs.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider(color = MoonColors.Divider)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "sing-box 最近日志（${logs.size} 行）",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MoonColors.TextSecondary,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    logs.forEach { line ->
+                        Text(
+                            line.take(120),
+                            fontSize = 11.sp,
+                            color = MoonColors.TextSecondary,
+                        )
+                    }
+                }
+            }
+        }
+
         // ---- 关于 ----
         MoonCard {
             Text(
@@ -139,7 +206,7 @@ fun SettingsScreen(settings: AppSettings) {
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    "Moon PC 0.2.9",
+                    "Moon PC 0.2.12",
                     fontSize = 14.sp,
                     color = MoonColors.TextPrimary,
                 )
