@@ -73,6 +73,53 @@ object TunManager {
         }.getOrDefault(false)
     }
 
+    /** 返回路由表中与 TUN 相关的行（供诊断面板显示） */
+    fun tunRouteLines(): List<String> {
+        if (!isWindows()) return emptyList()
+        return runCatching {
+            val p = ProcessBuilder("route", "print", "-4").redirectErrorStream(true).start()
+            val out = p.inputStream.bufferedReader().readText()
+            p.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
+            out.lines().filter { line ->
+                line.contains("172.19.0.") || line.contains("128.0.0.0")
+            }.take(10)
+        }.getOrDefault(emptyList())
+    }
+
+    /** 手动添加 TUN 劫持路由（sing-box auto_route 在 Windows 上不可靠，改由我们自己加） */
+    fun addTunRoutes(tunIp: String = "172.19.0.1"): Boolean {
+        if (!isWindows()) return false
+        return runCatching {
+            // 0.0.0.0/1 和 128.0.0.0/1 走 TUN 网关，metric 5 优先于默认路由
+            val cmds = listOf(
+                arrayOf("route", "add", "0.0.0.0", "mask", "128.0.0.0", tunIp, "metric", "5"),
+                arrayOf("route", "add", "128.0.0.0", "mask", "128.0.0.0", tunIp, "metric", "5"),
+            )
+            cmds.all { cmd ->
+                val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+                p.waitFor(15, java.util.concurrent.TimeUnit.SECONDS)
+                p.exitValue() == 0
+            }
+        }.getOrDefault(false)
+    }
+
+    /** 删除 TUN 劫持路由（停止时代理清理） */
+    fun removeTunRoutes(): Boolean {
+        if (!isWindows()) return false
+        return runCatching {
+            val cmds = listOf(
+                arrayOf("route", "delete", "0.0.0.0", "mask", "128.0.0.0"),
+                arrayOf("route", "delete", "128.0.0.0", "mask", "128.0.0.0"),
+            )
+            cmds.all { cmd ->
+                val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+                p.waitFor(15, java.util.concurrent.TimeUnit.SECONDS)
+                // delete 失败也算 OK（路由可能本来就不存在）
+                true
+            }
+        }.getOrDefault(false)
+    }
+
     /** 一句话诊断结论 */
     fun diagnose(interfaceName: String = "moon-tun"): String {
         if (!isWindows()) return "非 Windows，跳过诊断"

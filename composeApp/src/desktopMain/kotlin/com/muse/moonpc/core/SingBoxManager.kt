@@ -289,6 +289,18 @@ class SingBoxManager(
             }
             systemProxyOurs = true
         }
+        // ---- TUN 模式：手动加劫持路由（sing-box auto_route 在 Windows 上不可靠） ----
+        if (mode == ConfigGenerator.ProxyMode.TUN) {
+            // 等 TUN 网卡建起来（最多等 10 秒）
+            var nicReady = false
+            repeat(20) {
+                if (TunManager.tunInterfaceExists()) { nicReady = true; return@repeat }
+                Thread.sleep(500)
+            }
+            if (nicReady) {
+                TunManager.addTunRoutes()
+            }
+        }
         proxyMode = mode
         Result.success(Unit)
         }
@@ -299,6 +311,10 @@ class SingBoxManager(
         synchronized(startStopLock) {
             runCatching { mitmProxy?.stop() }
             mitmProxy = null
+            // TUN 模式：清理手动加的劫持路由
+            if (proxyMode == ConfigGenerator.ProxyMode.TUN) {
+                runCatching { TunManager.removeTunRoutes() }
+            }
             val p = process
             if (p != null) {
                 runCatching {
