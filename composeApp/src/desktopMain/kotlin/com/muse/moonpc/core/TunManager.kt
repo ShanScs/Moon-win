@@ -48,4 +48,41 @@ object TunManager {
         }
         return null
     }
+
+    /** TUN 运行诊断：网卡是否存在 */
+    fun tunInterfaceExists(interfaceName: String = "moon-tun"): Boolean {
+        if (!isWindows()) return false
+        return runCatching {
+            val p = ProcessBuilder("ipconfig").redirectErrorStream(true).start()
+            val out = p.inputStream.bufferedReader().readText()
+            p.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
+            out.contains(interfaceName, ignoreCase = true)
+        }.getOrDefault(false)
+    }
+
+    /** TUN 运行诊断：劫持路由是否存在（auto_route 是否生效） */
+    fun tunRoutesPresent(): Boolean {
+        if (!isWindows()) return false
+        return runCatching {
+            val p = ProcessBuilder("route", "print", "-4").redirectErrorStream(true).start()
+            val out = p.inputStream.bufferedReader().readText()
+            p.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
+            // auto_route 会加 0.0.0.0/1 和 128.0.0.0/1（或 route print 显示为 0.0.0.0 mask 128.0.0.0）
+            out.contains("0.0.0.0/1") || out.contains("128.0.0.0/1") ||
+                (out.contains("0.0.0.0") && out.contains("128.0.0.0") && out.contains("172.19.0."))
+        }.getOrDefault(false)
+    }
+
+    /** 一句话诊断结论 */
+    fun diagnose(interfaceName: String = "moon-tun"): String {
+        if (!isWindows()) return "非 Windows，跳过诊断"
+        val nic = tunInterfaceExists(interfaceName)
+        val routes = tunRoutesPresent()
+        return when {
+            !nic && !routes -> "TUN 网卡不存在，路由也没有——sing-box 的 TUN 根本没建起来"
+            nic && !routes -> "网卡在，但劫持路由缺失——auto_route 没生效，流量不会进 TUN"
+            !nic && routes -> "路由在但网卡不在——状态异常，重启代理试试"
+            else -> "网卡和路由都在——流量进了 TUN，问题在 sing-box 内部分流规则"
+        }
+    }
 }

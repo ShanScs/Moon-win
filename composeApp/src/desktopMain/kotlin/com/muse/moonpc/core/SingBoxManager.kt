@@ -42,6 +42,10 @@ class SingBoxManager(
     /** 进程日志回调（UI 线程外调用） */
     var onLog: ((String) -> Unit)? = null
 
+    /** 最近日志环形缓冲（最多保留 200 行，供诊断面板查看） */
+    private val logBuffer = ArrayDeque<String>(200)
+    fun recentLogs(): List<String> = synchronized(logBuffer) { logBuffer.toList() }
+
     private var process: Process? = null
 
     /** 系统代理是否由本次启动打开（停止时负责还原） */
@@ -55,6 +59,9 @@ class SingBoxManager(
 
     /** MITM 是否实际在运行 */
     fun isMitmRunning(): Boolean = mitmProxy?.isRunning() == true
+
+    /** sing-box 进程是否还活着（start 后崩溃也能发现） */
+    fun isProcessAlive(): Boolean = process?.isAlive == true
 
     companion object {
         fun defaultBinaryName(): String {
@@ -227,6 +234,10 @@ class SingBoxManager(
             // 后台消费日志
             Thread({
                 p.inputStream.bufferedReader().forEachLine { line ->
+                    synchronized(logBuffer) {
+                        if (logBuffer.size >= 200) logBuffer.removeFirst()
+                        logBuffer.addLast(line)
+                    }
                     onLog?.invoke(line)
                 }
             }, "sing-box-log").apply { isDaemon = true }.start()

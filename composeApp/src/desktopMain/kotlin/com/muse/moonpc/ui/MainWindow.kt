@@ -539,7 +539,7 @@ fun MainWindow(onExit: () -> Unit) {
                                     onStatus = { statusMsg = it },
                                 )
                                 7 -> DnsScreen(dns = dnsSettings)
-                                else -> SettingsScreen(settings)
+                                else -> SettingsScreen(settings, manager)
                             }
                         }
                     }
