@@ -1,0 +1,80 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Download sing-box Windows binary
+        shell: pwsh
+        run: |
+          # 获取最新 sing-box release 版本
+          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/SagerNet/sing-box/releases/latest"
+          $ver = $release.tag_name -replace '^v',''
+          Write-Host "sing-box version: $ver"
+          $asset = $release.assets | Where-Object { $_.name -like "sing-box-*-windows-amd64.zip" } | Select-Object -First 1
+          if (-not $asset) { throw "sing-box windows-amd64 asset not found" }
+          Write-Host "Downloading $($asset.name)"
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "$env:RUNNER_TEMP\sing-box.zip"
+          Expand-Archive -Path "$env:RUNNER_TEMP\sing-box.zip" -DestinationPath "$env:RUNNER_TEMP\sing-box"
+          $exe = Get-ChildItem -Path "$env:RUNNER_TEMP\sing-box" -Recurse -Filter "sing-box.exe" | Select-Object -First 1
+          if (-not $exe) { throw "sing-box.exe not found" }
+          Write-Host "Found: $($exe.FullName) ($([math]::Round($exe.Length/1MB,1)) MB)"
+          New-Item -ItemType Directory -Force -Path "composeApp/build/singbox-win" | Out-Null
+          Copy-Item $exe.FullName "composeApp/build/singbox-win/sing-box.exe"
+          echo "SINGBOX_VERSION=$ver" >> $env:GITHUB_ENV
+
+      - name: Build desktop jar
+        run: ./gradlew.bat :composeApp:desktopJar "-Pkotlin.compiler.execution.strategy=in-process" --no-daemon
+
+      - name: Package Windows app-image
+        run: ./gradlew.bat :composeApp:packageAppImage "-Pkotlin.compiler.execution.strategy=in-process" --no-daemon
+
+      - name: Bundle sing-box and build MSI
+        shell: pwsh
+        run: |
+          $launcher = Get-ChildItem -Path "composeApp/build/compose/binaries/main/app" -Recurse -Filter "MoonPC.exe" | Select-Object -First 1
+          if (-not $launcher) {
+            # 尝试找 Moon.exe 或其他
+            $launcher = Get-ChildItem -Path "composeApp/build/compose/binaries/main/app" -Recurse -Filter "*.exe" | Select-Object -First 1
+          }
+          if (-not $launcher) { throw "launcher exe not found in app-image" }
+          $appDir = $launcher.Directory.FullName
+          Write-Host "App dir: $appDir"
+          # sing-box.exe 放到 app 目录，SingBoxManager 会在同目录查找
+          Copy-Item "composeApp/build/singbox-win/sing-box.exe" $appDir
+          $ver = (Select-String -Path "composeApp/build.gradle.kts" -Pattern 'packageVersion\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+          Write-Host "Package version: $ver"
+          $jpackage = Join-Path $env:JAVA_HOME "bin\jpackage.exe"
+          & $jpackage --type msi --app-image "$appDir" --name "MoonPC" --app-version "$ver" --vendor "Muse" --description "Moon PC - desktop proxy client (sing-box core)" --dest "composeApp/build/msi" --win-menu --win-shortcut --win-upgrade-uuid "48cbabd8-2bbe-40c6-8e3a-96f4588fa96e"
+          $msi = Get-ChildItem -Path "composeApp/build/msi" -Filter "*.msi" | Select-Object -First 1
+          if (-not $msi) { throw "MSI not created" }
+          $msiFinal = Join-Path "composeApp/build/msi" "Moon-win-$ver.msi"
+          Move-Item $msi.FullName $msiFinal -Force
+          Write-Host "MSI: $msiFinal ($([math]::Round((Get-Item $msiFinal).Length/1MB,1)) MB)"
+          echo "MSI_PATH=$msiFinal" >> $env:GITHUB_ENV
+          echo "PKG_VERSION=$ver" >> $env:GITHUB_ENV
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Moon-win-${{ env.PKG_VERSION }}.msi
+          path: ${{ env.MSI_PATH }}
+          retention-days: 30
