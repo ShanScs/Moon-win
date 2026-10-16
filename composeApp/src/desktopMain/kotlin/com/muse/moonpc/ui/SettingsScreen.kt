@@ -139,14 +139,17 @@ fun SettingsScreen(settings: AppSettings, manager: SingBoxManager? = null) {
                     color = MoonColors.TextSecondary,
                 )
                 Spacer(Modifier.height(8.dp))
+                var diagRoutes by remember { mutableStateOf<List<String>>(emptyList()) }
                 androidx.compose.material3.Button(
                     onClick = {
                         diagBusy = true
                         diagResult = null
                         scope.launch(Dispatchers.IO) {
                             val r = TunManager.diagnose()
+                            val routes = TunManager.tunRouteLines()
                             withContext(Dispatchers.Main) {
                                 diagResult = r
+                                diagRoutes = routes
                                 diagBusy = false
                             }
                         }
@@ -162,6 +165,22 @@ fun SettingsScreen(settings: AppSettings, manager: SingBoxManager? = null) {
                         fontSize = 14.sp,
                         color = MoonColors.TextPrimary,
                     )
+                }
+                if (diagRoutes.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "路由表 TUN 相关行：",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MoonColors.TextSecondary,
+                    )
+                    diagRoutes.forEach { line ->
+                        Text(
+                            line.trim().take(100),
+                            fontSize = 11.sp,
+                            color = MoonColors.TextSecondary,
+                        )
+                    }
                 }
                 val logs = remember(diagResult) { manager.recentLogs().takeLast(30) }
                 if (logs.isNotEmpty()) {
@@ -206,7 +225,7 @@ fun SettingsScreen(settings: AppSettings, manager: SingBoxManager? = null) {
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    "Moon PC 0.2.13",
+                    "Moon PC 0.2.14",
                     fontSize = 14.sp,
                     color = MoonColors.TextPrimary,
                 )
