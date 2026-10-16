@@ -25,10 +25,12 @@ object ConfigGenerator {
     enum class ProxyMode(val label: String) {
         /** TUN 全局接管（需管理员权限） */
         TUN("TUN"),
-        /** 系统代理：mixed 入站 + 写系统代理设置 */
-        SYSTEM_PROXY("系统代理"),
-        /** 仅手动：mixed 入站，不碰系统设置 */
-        MANUAL("手动"),
+        /** 全局代理：全部流量走代理 */
+        GLOBAL_PROXY("全局代理"),
+        /** 自动分流：按规则分流 */
+        AUTO_ROUTE("自动分流"),
+        /** 全局直连：全部流量直连 */
+        GLOBAL_DIRECT("全局直连"),
     }
 
     /** 生成选项 */
@@ -36,7 +38,7 @@ object ConfigGenerator {
         val mixedPort: Int = 7890,
         val clashPort: Int = 9090,
         val logLevel: String = "info",
-        val mode: ProxyMode = ProxyMode.SYSTEM_PROXY,
+        val mode: ProxyMode = ProxyMode.AUTO_ROUTE,
         // --- TUN ---
         val tunInterfaceName: String = "moon-tun",
         /**
@@ -112,9 +114,15 @@ object ConfigGenerator {
         }
         outbounds.put(selector)
 
+        // 全局代理/全局直连：不带规则；自动分流/TUN：带规则
+        val useRules = opts.mode == ProxyMode.AUTO_ROUTE || opts.mode == ProxyMode.TUN
         val rulesJson = buildRouteRules(routeRules, compiledRuleSets, groupTags)
+        val routeFinal = when (opts.mode) {
+            ProxyMode.GLOBAL_DIRECT -> "direct"
+            else -> if (nodeTags.isNotEmpty()) "PROXY" else "direct"
+        }
         val route = JSONObject()
-            .put("final", if (nodeTags.isNotEmpty()) "PROXY" else "direct")
+            .put("final", routeFinal)
             .put("auto_detect_interface", true)
         // sing-box 1.14 必填：出站域名解析器（替代旧 outbound DNS rule）。
         // 必须用直连 DNS，避免"解析代理服务器域名→走代理→又需解析"的循环依赖。
@@ -125,8 +133,8 @@ object ConfigGenerator {
             else -> null
         }
         if (domainResolverTag != null) route.put("default_domain_resolver", domainResolverTag)
-        if (rulesJson.array.length() > 0) route.put("rules", rulesJson.array)
-        if (rulesJson.usesGeoip) {
+        if (useRules && rulesJson.array.length() > 0) route.put("rules", rulesJson.array)
+        if (useRules && rulesJson.usesGeoip) {
             route.put(
                 "geoip", JSONObject()
                     .put("path", "geoip.db")

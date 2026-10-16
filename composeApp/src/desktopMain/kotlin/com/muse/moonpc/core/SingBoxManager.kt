@@ -34,7 +34,7 @@ class SingBoxManager(
     val clashPort: Int = 9090
 
     /** 当前代理模式（UI 可切换） */
-    var proxyMode: ConfigGenerator.ProxyMode = ConfigGenerator.ProxyMode.SYSTEM_PROXY
+    var proxyMode: ConfigGenerator.ProxyMode = ConfigGenerator.ProxyMode.AUTO_ROUTE
 
     /** TUN 协议栈：gvisor（免驱动）/ system（Windows 走 Wintun） */
     var tunStack: String = "gvisor"
@@ -265,7 +265,8 @@ class SingBoxManager(
 
         // ---- 系统代理后置动作 ----
         // MITM 运行时系统代理指向 8888（MITM），否则指向 sing-box mixed（7890）
-        if (mode == ConfigGenerator.ProxyMode.SYSTEM_PROXY) {
+        // TUN 之外的三种模式（全局代理/自动分流/全局直连）都走系统代理
+        if (mode != ConfigGenerator.ProxyMode.TUN) {
             val proxyPort = if (mitmProxy?.isRunning() == true) mitmPort else mixedPort
             val r = ProxyModeManager.enableSystemProxy(port = proxyPort)
             if (r.isFailure) {

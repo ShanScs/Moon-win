@@ -102,7 +102,7 @@ fun MainWindow(onExit: () -> Unit) {
     var running by remember { mutableStateOf(false) }
     var version by remember { mutableStateOf<String?>(null) }
     var statusMsg by remember { mutableStateOf("就绪") }
-    var mode by remember { mutableStateOf(ConfigGenerator.ProxyMode.SYSTEM_PROXY) }
+    var mode by remember { mutableStateOf(ConfigGenerator.ProxyMode.AUTO_ROUTE) }
     var tab by remember { mutableStateOf(0) }
     // 管理员检测会起子进程（Windows 上约 1 秒），放后台做，避免卡首帧
     var isAdmin by remember { mutableStateOf<Boolean?>(null) }
@@ -185,13 +185,18 @@ fun MainWindow(onExit: () -> Unit) {
                 statusMsg = when (mode) {
                     ConfigGenerator.ProxyMode.TUN ->
                         "运行中（TUN 全局接管$mitmNote）"
-                    ConfigGenerator.ProxyMode.SYSTEM_PROXY ->
+                    ConfigGenerator.ProxyMode.GLOBAL_PROXY ->
                         if (manager.isMitmRunning())
-                            "运行中（系统代理 127.0.0.1:${manager.mitmPort} → MITM → :${manager.mixedPort}）"
+                            "运行中（全局代理 127.0.0.1:${manager.mitmPort} → MITM → :${manager.mixedPort}）"
                         else
-                            "运行中（系统代理 127.0.0.1:${manager.mixedPort}）"
-                    ConfigGenerator.ProxyMode.MANUAL ->
-                        "运行中（手动：代理 127.0.0.1:${manager.mixedPort}$mitmNote）"
+                            "运行中（全局代理 127.0.0.1:${manager.mixedPort}）"
+                    ConfigGenerator.ProxyMode.AUTO_ROUTE ->
+                        if (manager.isMitmRunning())
+                            "运行中（自动分流 127.0.0.1:${manager.mitmPort} → MITM → :${manager.mixedPort}）"
+                        else
+                            "运行中（自动分流 127.0.0.1:${manager.mixedPort}）"
+                    ConfigGenerator.ProxyMode.GLOBAL_DIRECT ->
+                        "运行中（全局直连 127.0.0.1:${manager.mixedPort}$mitmNote）"
                 }
             } else {
                 statusMsg = "启动失败：${r.exceptionOrNull()?.message}"
