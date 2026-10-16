@@ -206,7 +206,7 @@ fun SettingsScreen(settings: AppSettings, manager: SingBoxManager? = null) {
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    "Moon PC 0.2.12",
+                    "Moon PC 0.2.13",
                     fontSize = 14.sp,
                     color = MoonColors.TextPrimary,
                 )
