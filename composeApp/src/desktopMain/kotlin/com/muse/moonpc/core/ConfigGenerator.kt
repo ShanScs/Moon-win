@@ -138,8 +138,7 @@ object ConfigGenerator {
             route.put(
                 "geoip", JSONObject()
                     .put("path", "geoip.db")
-                    .put("download_url", "https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db")
-                    .put("download_detour", "direct"),
+                    .put("download_url", "https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db"),
             )
         }
 
@@ -316,9 +315,10 @@ object ConfigGenerator {
             val servers = JSONArray()
             opts.dnsServers.forEachIndexed { i, addr ->
                 val o = dnsServerObject("dns-$i", addr)
-                // TUN 模式：首个 DNS 走代理防泄漏，其余直连
-                if (opts.mode == ProxyMode.TUN) {
-                    o.put("detour", if (i == 0) "PROXY" else "direct")
+                // TUN 模式：首个 DNS 走代理防泄漏；其余不写 detour（默认直连）。
+                // 注意：sing-box 1.12+ 禁止 detour:"direct"（空 direct 出站会 FATAL），省略即直连。
+                if (opts.mode == ProxyMode.TUN && i == 0) {
+                    o.put("detour", "PROXY")
                 }
                 servers.put(o)
             }
@@ -368,8 +368,7 @@ object ConfigGenerator {
                                 .put("detour", "PROXY"),
                         )
                         .put(
-                            dnsServerObject("local-dns", "223.5.5.5")
-                                .put("detour", "direct"),
+                            dnsServerObject("local-dns", "223.5.5.5"),
                         ),
                 )
                 .put("final", "proxy-dns")
